@@ -5,6 +5,7 @@ This is the main module, entry point to the pipeline.
 All parameters have to be configured here
 """
 
+import numpy as np
 import scipy.io as sio
 import os
 import glob
@@ -12,6 +13,7 @@ from pathlib import Path
 import pydicom
 from utils.HandleNifti import FileRead, FileSave
 from utils.HandleDicom import ListRead
+from utils.Coils import generateBirdcageCSM 
 from CartesianUndersampling.Perform import performUndersampling as cartUnder
 from RadialUndersampling.Perform import performUndersampling as radUnder
 from Sampler import Sampler
@@ -26,23 +28,31 @@ __email__ = "soumick.chatterjee@ovgu.de"
 __status__ = "Finished"
 
 ######Params configuration zone starts here
-useExistingMATs = False # [True/False] If an existing MAT file containing the sampling pattern (mask or om) is to be used.
-fullySampledPath = r'' #Root path containing fully sampled images (NIFTIs: .img, .nii, .nii.gz or DICOMs: .ima, .dcm)
+useExistingMATs = True # [True/False] If an existing MAT file containing the sampling pattern (mask or om) is to be used.
+fullySampledPath = r'E:\Datasets\IXI\IXI-T1' #Root path containing fully sampled images (NIFTIs: .img, .nii, .nii.gz or DICOMs: .ima, .dcm)
 min_scan_no = None # Will be only used for DICOMs. If a single folder contains DICOMs from multiple scans, then using this parameter the starting scan number can be mentioned. If set to None, then will start from the very beginning.
 max_scan_no = None #Will be only used for DICOMs. Similar to the last one, itdenotes the last scan that to be considered. If set to None, then scans will be considered till the very last.
-underSampledOutPath = r'' #Root path to store the undersampled output
-outFolder = r'' #Inside the underSampledOutPath, this folder will be created. Inside which the undersampled results will be stored
+underSampledOutPath = r'E:\Datasets\IXI\UnderCoilImg\IXI-T1' #Root path to store the undersampled output
+outFolder = r'1DVarden30Mask-16Ch' #Inside the underSampledOutPath, this folder will be created. Inside which the undersampled results will be stored
 keepOriginalFormat = True # [True/False] Will be only used for NIFTIs. Specifies whether to keep the original NIFTI extension (e.g. .img) or different file extension to be used while saving
 saveFileFormat = '.nii.gz' # File extension to be used while saving the undersampled soutput. For NIFTIs, if keepOriginalFormat=True, then this will be ignored.
+nCoilElements = 16 # set it to zero if coil profile not needed
+
+NormWithABS = True #If False then Real will be used, if true then ABS
 
 #Params for using MATs - will be ignored if useExistingMATs is False
 isRadial = False
-mask_or_om_path = r''
+mask_or_om_path = r"D:\CloudData\OneDrive\OvGU\My Codes\Neural\Enterprise\NCC1701\NCC1701\1DVarden30Mask.mat"
+
+#Params for coil simulation
+relative_radius = 0.8 #for birdcage simulation
+simulate4each = False #This is needed when they have different height and width. If true, then inputShape varible will be used which is mentioned below
+fullySampledCoilImgOutPath = r'E:\Datasets\IXI\FullyCoilImg\IXI-T1-16Ch'#None# r'' #It will only be used when nCoilElements > 0 and this variable is not None. When you don't want to save the fully sampled coil images, then set it to None 
 
 #Params for generating fresh sampling patterns - will be ignored if useExistingMATs is True
-recalculateUndersampling4Each = True
+recalculateUndersampling4Each = False
 staticSamplingFileName =  r'' #To be used if recalculateUndersampling4Each is set to False, to store the generated sampling pattern
-inputShape = (256,256) #This is a must have when not recalculating sampling patterns for each volume seperately. If recalculateUndersampling4Each set to True, then this is ignored
+inputShape = (256,256) #This is a must have when not recalculating sampling patterns for each volume seperately. If recalculateUndersampling4Each set to True, then this is ignored. Also used when coil is not getting simulated for each
 
 undersamplingType = 0 #Cartesian Samplings := 0: Varden1D, 1: Varden2D, 2: Uniform, 3: CenterMaskPercent, 4: CenterMaskIgnoreLines, 5: CenterRatioMask, 6: CenterSquareMask, 7: High-frequency Mask 
                       #Radial Samplings := 10: Golden Angle, 11: Equi-distance (Yet to be implimented)
@@ -83,25 +93,69 @@ else:
         sio.savemat(staticSamplingFileName, samplings)
 
 
+if not simulate4each :
+    csm = generateBirdcageCSM(inputShape, nCoilElements, relative_radius)
+else:
+    csm = None
+
+def _getCoilImages(fullImgVol, csm, fullpath_file_fully=None):
+    if csm is None:
+        csm = generateBirdcageCSM(fullImgVol.shape[0:2], nCoilElements, relative_radius)
+    coilVolComplex = np.zeros(fullImgVol.shape+(nCoilElements,), dtype=np.complex64)
+    for i in range(fullImgVol.shape[-1]):
+        img = fullImgVol[...,i]
+        img = img[np.newaxis, :, :] * csm
+        coilVolComplex[...,i,:] = img.transpose((1,2,0))
+    if fullySampledCoilImgOutPath is not None and fullpath_file_fully is not None:
+        fullpath_file_fullycoil = fullpath_file_fully.replace(fullySampledPath, fullySampledCoilImgOutPath)
+        os.makedirs(os.path.dirname(fullpath_file_fullycoil), exist_ok=True)
+        if NormWithABS:
+            coilVol = abs(coilVolComplex)
+        else:
+            coilVol = coilVolComplex.real
+        FileSave(coilVol, fullpath_file_fullycoil)
+    return coilVolComplex
+
 def _undersample(fullImgVol, fullpath_file_under):
-    if recalculateUndersampling4Each:
-        samplings = sampler.calculateSamplings(slice=fullImgVol[...,0], returnMeta=True)
+    try:
         if(not isRadial):
-            mask = samplings['mask'] 
-            underImgVol = cartUnder(fullImgVol, mask)
-            samplingfilename = fullpath_file_under + '.mask.mat'
+            global mask
         else:
-            om = samplings['om'] 
-            dcf = samplings['dcf'].squeeze() 
-            underImgVol = radUnder(fullImgVol, om, dcf)
-            samplingfilename = fullpath_file_under + '.om.mat'
-        sio.savemat(samplingfilename, samplings)
-    else:
-        if(not isRadial):
-            underImgVol = cartUnder(fullImgVol, mask)
+            global om, dcf, interpolationSize4NUFFT
+        if recalculateUndersampling4Each:
+            samplings = sampler.calculateSamplings(slice=fullImgVol[...,0], returnMeta=True)
+            if(not isRadial):
+                mask = samplings['mask'] 
+                underImgVol = cartUnder(fullImgVol, mask)
+                samplingfilename = fullpath_file_under + '.mask.mat'
+            else:
+                om = samplings['om'] 
+                dcf = samplings['dcf'].squeeze() 
+                underImgVol = radUnder(fullImgVol, om, dcf)
+                samplingfilename = fullpath_file_under + '.om.mat'
+            sio.savemat(samplingfilename, samplings)
         else:
-            underImgVol = radUnder(fullImgVol, om, dcf, interpolationSize4NUFFT)
-    FileSave(underImgVol, fullpath_file_under)
+            if len(fullImgVol.shape) == 4:
+                underImgVol = np.zeros(fullImgVol.shape, dtype=fullImgVol.dtype)
+                for i in range(fullImgVol.shape[3]):
+                    coilImgFull = fullImgVol[:,:,:,i] 
+                    if(not isRadial):
+                        coilImgUnder = cartUnder(coilImgFull, mask)
+                    else:
+                        coilImgUnder = radUnder(coilImgFull, om, dcf, interpolationSize4NUFFT)
+                    underImgVol[:,:,:,i] = coilImgUnder 
+            else:
+                if(not isRadial):
+                    underImgVol = cartUnder(fullImgVol, mask)
+                else:
+                    underImgVol = radUnder(fullImgVol, om, dcf, interpolationSize4NUFFT)
+        if NormWithABS:
+            underImgVol = abs(underImgVol)
+        else:
+            underImgVol = underImgVol.real
+        FileSave(underImgVol, fullpath_file_under)
+    except Exception as ex:
+        print(ex)
 
 #Deal with NIFTI
 types = ('.img', '.nii', '.nii.gz') # the tuple of file types
@@ -119,6 +173,8 @@ for fullpath_file_fully in files:
         fullpath_file_under = filename + saveFileFormat
 
     fullImgVol = FileRead(fullpath_file_fully).squeeze() #Squeeze to remove channel dim if only one channel
+    if nCoilElements != 0:
+        fullImgVol = _getCoilImages(fullImgVol, csm, fullpath_file_fully)
     _undersample(fullImgVol, fullpath_file_under)
 
 
@@ -150,4 +206,6 @@ for identifier, files in dicoms.items():
     os.makedirs(os.path.dirname(fullpath_file_under), exist_ok=True) #create directorries if doesnt exist
 
     fullImgVol = ListRead(files).squeeze() #Squeeze to remove channel dim if only one channel
+    if nCoilElements != 0:
+        fullImgVol = _getCoilImages(fullImgVol, csm, fullpath_file_fully)
     _undersample(fullImgVol, fullpath_file_under)
