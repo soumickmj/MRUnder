@@ -29,11 +29,12 @@ __status__ = "Finished"
 
 ######Params configuration zone starts here
 useExistingMATs = True # [True/False] If an existing MAT file containing the sampling pattern (mask or om) is to be used.
-fullySampledPath = r'E:\Datasets\IXI\IXI-T1' #Root path containing fully sampled images (NIFTIs: .img, .nii, .nii.gz or DICOMs: .ima, .dcm)
+fullySampledPath = r'' #Root path containing fully sampled images (NIFTIs: .img, .nii, .nii.gz or DICOMs: .ima, .dcm)
 min_scan_no = None # Will be only used for DICOMs. If a single folder contains DICOMs from multiple scans, then using this parameter the starting scan number can be mentioned. If set to None, then will start from the very beginning.
 max_scan_no = None #Will be only used for DICOMs. Similar to the last one, itdenotes the last scan that to be considered. If set to None, then scans will be considered till the very last.
-underSampledOutPath = r'E:\Datasets\IXI\UnderCoilImg\IXI-T1' #Root path to store the undersampled output
+underSampledOutPath = r'' #Root path to store the undersampled output
 outFolder = r'1DVarden30Mask-16Ch' #Inside the underSampledOutPath, this folder will be created. Inside which the undersampled results will be stored
+zeropadOutput = True #By default set to True, when set to False doesn't zero pad the k-Space and decreases the pixel resolution of the output image. This should only be set True when using Cartesian CenterMasks
 keepOriginalFormat = True # [True/False] Will be only used for NIFTIs. Specifies whether to keep the original NIFTI extension (e.g. .img) or different file extension to be used while saving
 saveFileFormat = '.nii.gz' # File extension to be used while saving the undersampled soutput. For NIFTIs, if keepOriginalFormat=True, then this will be ignored.
 nCoilElements = 16 # set it to zero if coil profile not needed
@@ -42,12 +43,12 @@ NormWithABS = True #If False then Real will be used, if true then ABS
 
 #Params for using MATs - will be ignored if useExistingMATs is False
 isRadial = False
-mask_or_om_path = r"D:\CloudData\OneDrive\OvGU\My Codes\Neural\Enterprise\NCC1701\NCC1701\1DVarden30Mask.mat"
+mask_or_om_path = r""
 
 #Params for coil simulation
 relative_radius = 0.8 #for birdcage simulation
 simulate4each = False #This is needed when they have different height and width. If true, then inputShape varible will be used which is mentioned below
-fullySampledCoilImgOutPath = r'E:\Datasets\IXI\FullyCoilImg\IXI-T1-16Ch'#None# r'' #It will only be used when nCoilElements > 0 and this variable is not None. When you don't want to save the fully sampled coil images, then set it to None 
+fullySampledCoilImgOutPath = r''#None# r'' #It will only be used when nCoilElements > 0 and this variable is not None. When you don't want to save the fully sampled coil images, then set it to None 
 
 #Params for generating fresh sampling patterns - will be ignored if useExistingMATs is True
 recalculateUndersampling4Each = False
@@ -126,7 +127,7 @@ def _undersample(fullImgVol, fullpath_file_under):
             samplings = sampler.calculateSamplings(slice=fullImgVol[...,0], returnMeta=True)
             if(not isRadial):
                 mask = samplings['mask'] 
-                underImgVol = cartUnder(fullImgVol, mask)
+                underImgVol = cartUnder(fullImgVol, mask, zeropad=zeropadOutput)
                 samplingfilename = fullpath_file_under + '.mask.mat'
             else:
                 om = samplings['om'] 
@@ -140,13 +141,13 @@ def _undersample(fullImgVol, fullpath_file_under):
                 for i in range(fullImgVol.shape[3]):
                     coilImgFull = fullImgVol[:,:,:,i] 
                     if(not isRadial):
-                        coilImgUnder = cartUnder(coilImgFull, mask)
+                        coilImgUnder = cartUnder(coilImgFull, mask, zeropad=zeropadOutput)
                     else:
                         coilImgUnder = radUnder(coilImgFull, om, dcf, interpolationSize4NUFFT)
                     underImgVol[:,:,:,i] = coilImgUnder 
             else:
                 if(not isRadial):
-                    underImgVol = cartUnder(fullImgVol, mask)
+                    underImgVol = cartUnder(fullImgVol, mask, zeropad=zeropadOutput)
                 else:
                     underImgVol = radUnder(fullImgVol, om, dcf, interpolationSize4NUFFT)
         if NormWithABS:
