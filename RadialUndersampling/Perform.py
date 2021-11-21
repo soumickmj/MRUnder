@@ -8,7 +8,7 @@ for Radial Sampling pattern
 
 import scipy.io as sio
 import numpy as np
-from pynufft import NUFFT_cpu
+from pynufft import NUFFT
 
 __author__ = "Soumick Chatterjee"
 __copyright__ = "Copyright 2019, Soumick Chatterjee & OvGU:ESF:MEMoRIAL"
@@ -30,7 +30,7 @@ def performUndersampling(fullImgVol, om=None, dcf=None, interpolationSize4NUFFT=
     imageSize = fullImgVol.shape[0]
     baseresolution = imageSize*2
 
-    NufftObj = NUFFT_cpu()
+    NufftObj = NUFFT()
 
     Nd = (baseresolution, baseresolution)  # image size
     Kd = (baseresolution*2, baseresolution*2)  # k-space size 

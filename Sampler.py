@@ -97,9 +97,16 @@ class Sampler(object):
             metaname = 'PDF'
             samplingname = '#HighFreqMask_percent'+str(self.percentOfKSpace)+'_maxamp'+str(self.maxAmplitude4PDF)+'_rodir'+str(self.ROdir)
         elif self.undersamplingType == 10: #Golden Angle
-            omtuple, dcftuple = createGASampling(slice, self.noOfSpokes, self.fullresSpokesMulFactor, returnFullOM=True, returnInvOM=True)
-            samplingname = 'GoldenAngle_spokes'+str(self.noOfSpokes)+'_fulResMulFact'+str(self.fullresSpokesMulFactor)
             data = {}
+            if not bool(self.noOfSpokes):
+                baseresolution = slice.shape[0]
+                fullspokes = baseresolution * self.fullresSpokesMulFactor
+                noOfSpokes = round(fullspokes * self.percentOfKSpace)
+                samplingname = 'GoldenAngle_dynspokes'+str(noOfSpokes)+'_percent'+str(self.percentOfKSpace)+'_fulResMulFact'+str(self.fullresSpokesMulFactor)
+                omtuple, dcftuple = createGASampling(slice, noOfSpokes, self.fullresSpokesMulFactor, returnFullOM=True, returnInvOM=True)
+            else:
+                samplingname = 'GoldenAngle_spokes'+str(self.noOfSpokes)+'_fulResMulFact'+str(self.fullresSpokesMulFactor)
+                omtuple, dcftuple = createGASampling(slice, self.noOfSpokes, self.fullresSpokesMulFactor, returnFullOM=True, returnInvOM=True)
             data['om'] = omtuple[0]
             data['fullom'] = omtuple[1]
             data['invom'] = omtuple[2]
