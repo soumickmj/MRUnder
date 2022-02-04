@@ -34,11 +34,11 @@ __status__ = "Finished"
 
 ######Params configuration zone starts here
 useExistingMATs = True # [True/False] If an existing MAT file containing the sampling pattern (mask or om) is to be used.
-fullySampledPath = r'/run/media/soumick/Enterprise/Datasets/IXI/ISO_Resampled2T2/T1-BET' #Root path containing fully sampled images (NIFTIs: .img, .nii, .nii.gz or DICOMs: .ima, .dcm)
+fullySampledPath = r'/run/media/soumick/Enterprise/Datasets/ADNI/NewSet2022/IXIOrientation/wPad256' #Root path containing fully sampled images (NIFTIs: .img, .nii, .nii.gz or DICOMs: .ima, .dcm)
 min_scan_no = None # Will be only used for DICOMs. If a single folder contains DICOMs from multiple scans, then using this parameter the starting scan number can be mentioned. If set to None, then will start from the very beginning.
 max_scan_no = None #Will be only used for DICOMs. Similar to the last one, itdenotes the last scan that to be considered. If set to None, then scans will be considered till the very last.
-underSampledOutPath = r'/run/media/soumick/Enterprise/Datasets/IXI/ISO_Resampled2T2/Under/T1-BET-256' #Root path to store the undersampled output
-outFolder = r'Radial30spGA' #Inside the underSampledOutPath, this folder will be created. Inside which the undersampled results will be stored
+underSampledOutPath = r'/run/media/soumick/Enterprise/Datasets/ADNI/NewSet2022/IXIOrientation_Undersampled/wPad256' #Root path to store the undersampled output
+outFolder = r'2DVarden30Mask' #Inside the underSampledOutPath, this folder will be created. Inside which the undersampled results will be stored
 zeropadOutput = True #By default set to True, when set to False doesn't zero pad the k-Space and decreases the pixel resolution of the output image. This should only be set True when using Cartesian CenterMasks
 keepOriginalFormat = False # [True/False] Will be only used for NIFTIs. Specifies whether to keep the original NIFTI extension (e.g. .img) or different file extension to be used while saving
 saveFileFormat = '.nii.gz' # File extension to be used while saving the undersampled soutput. For NIFTIs, if keepOriginalFormat=True, then this will be ignored.
@@ -47,8 +47,9 @@ nCoilElements = 0 # set it to zero if coil profile not needed
 NormWithABS = True #If False then Real will be used, if true then ABS
 
 #Params for using MATs - will be ignored if useExistingMATs is False
-isRadial = True
-mask_or_om_path = r"/home/soumick/ReadyRoom/GitHub/NCC1701/Cargo/Radial30spGA.mat"
+isRadial = False
+# mask_or_om_path = r"/home/soumick/ReadyRoom/GitHub/NCC1701/Cargo/Radial60spGA.mat"
+mask_or_om_path = r"/home/soumick/ReadyRoom/GitHub/NCC1701/Cargo/2DVarden30Mask.mat"
 
 #Params for coil simulation
 relative_radius = 0.8 #for birdcage simulation
@@ -62,14 +63,14 @@ inputShape = (256,256) #This is a must have when not recalculating sampling patt
 croporpad = True
 fullySampledCropPaddedPath = ""#r'/run/media/soumick/Enterprise/Datasets/IXI/ISO_Resampled2T2/T1-BET-256'
 
-undersamplingType = 0 #Cartesian Samplings := 0: Varden1D, 1: Varden2D, 2: Uniform, 3: CenterMaskPercent, 4: CenterMaskIgnoreLines, 5: CenterRatioMask, 6: CenterSquareMask, 7: High-frequency Mask 
+undersamplingType = 1 #Cartesian Samplings := 0: Varden1D, 1: Varden2D, 2: Uniform, 3: CenterMaskPercent, 4: CenterMaskIgnoreLines, 5: CenterRatioMask, 6: CenterSquareMask, 7: High-frequency Mask 
                       #Radial Samplings := 10: Golden Angle, 11: Equi-distance (Yet to be implimented)
-percentOfKSpace = 0.10 #[between 0 and 1] Percent of k-Space to be sampled. To be used for Cartesian samplings except undersamplingType = 2, 4
+percentOfKSpace = 0.30 #[between 0 and 1] Percent of k-Space to be sampled. To be used for Cartesian samplings except undersamplingType = 2, 4
 stepsize = 4 #[arbitrary] Step size of k-Space sampling lines. To be used by Uniform sampling (Cartesian sampling : 2)
 lines2ignore = 10 #[arbitrary] How many lines to ignore from each side of the k-Space. To be used by CenterMaskIgnoreLines sampling (Cartesian sampling : 4)
 maxAmplitude4PDF = 0.5 #[between 0 and 1] compression factor of distribution. To be used by Varden1D and High-frequency Mask (Cartesian samplings : 0, 7)
 ROdir = 0 #[0, 1, 2 (both-direction)] Read-out direction. To be used by Varden masks, uniform and high-frequency mask (Cartesian samplings : 0, 2, 7)
-noOfSpokes = 30 #[arbitrary] Number of spokes to sample. To be used by Radial samplings
+noOfSpokes = 60 #[arbitrary] Number of spokes to sample. To be used by Radial samplings
 fullresSpokesMulFactor = 2 #[arbitrary] Helps to define full resolution during radial sampling (GA), as in theory it can in infinite. Siemens recomands 2 or 3. 
 interpolationSize4NUFFT = 6 #To be used by Radial Samplings
 sliceUndersamplingFactor = 1 #[arbitrary] For Undersampling in the slice direction, this factor can be used. Setting this to 1 will make it inactive. Setting this more than 1 will choose every Nth slice. 

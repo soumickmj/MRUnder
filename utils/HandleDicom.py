@@ -11,10 +11,9 @@ import os
 import tkinter as tk
 from tkinter import filedialog
 import numpy as np
-from vtk.util import numpy_support
-import vtk
 import pydicom
 from pydicom.dataset import Dataset, FileDataset
+import SimpleITK as sitk
 
 __author__ = "Soumick Chatterjee"
 __copyright__ = "Copyright 2018, Soumick Chatterjee & OvGU:ESF:MEMoRIAL"
@@ -56,7 +55,7 @@ def FileRead2D(file_path):
 
 def ChooseFolderNRead():
     """Choose a folder using file dialog box and read all the DICOM files (slices of a same image) inside that folder as 3D array
-    Using: VTK"""
+    Using: SimpleITK"""
     root = tk.Tk()
     root.withdraw()
     folder_path = filedialog.askdirectory()
@@ -79,25 +78,13 @@ def ListRead(file_list, expand_last_dim = False):
 
 def FolderRead(folder_path):
     """Read DICOM files inside the given folder path, and read them as one 3D array
-    Using: VTK"""
-    reader = vtk.vtkDICOMImageReader()
-    reader.SetDirectoryName(folder_path)
-    reader.Update()
-    # Load dimensions using `GetDataExtent`
-    _extent = reader.GetDataExtent()
-    ConstPixelDims = [_extent[1]-_extent[0]+1, _extent[3]-_extent[2]+1, _extent[5]-_extent[4]+1, 1]
-    # Load spacing values
-    ConstPixelSpacing = reader.GetPixelSpacing()
-    # Get the 'vtkImageData' object from the reader
-    imageData = reader.GetOutput()
-    # Get the 'vtkPointData' object from the 'vtkImageData' object
-    pointData = imageData.GetPointData()
-    # Get the `vtkArray` (or whatever derived type) which is needed for the `numpy_support.vtk_to_numpy` function
-    arrayData = pointData.GetArray(0)
-    # Convert the `vtkArray` to a NumPy array
-    ArrayDicom = numpy_support.vtk_to_numpy(arrayData)
-    # Reshape the NumPy array to 3D using 'ConstPixelDims' as a 'shape'
-    data = ArrayDicom.reshape(ConstPixelDims, order='F')
+    Presuming the folder has only one DICOM series and its 3D
+    Using: SimpleITK"""
+    reader = sitk.ImageSeriesReader()
+    dicom_names = reader.GetGDCMSeriesFileNames(folder_path)
+    reader.SetFileNames(dicom_names)
+    image = reader.Execute()
+    data = sitk.GetArrayFromImage(image).transpose([1,2,0])
     if (np.shape(np.shape(data))[0] == 3): #If channel data not present
         data = np.expand_dims(data, 3)
     return data
