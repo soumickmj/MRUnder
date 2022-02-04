@@ -1,3 +1,4 @@
 
 *.pyc
 main_chimp.py
+*__pycache__*

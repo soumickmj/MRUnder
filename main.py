@@ -15,6 +15,7 @@ import scipy.io as sio
 import torchio as tio
 from scipy.signal import resample
 from tqdm import tqdm
+from skimage.transform import resize
 
 from CartesianUndersampling.Perform import performUndersampling as cartUnder
 from RadialUndersampling.Perform import performUndersampling as radUnder
@@ -33,14 +34,14 @@ __email__ = "soumick.chatterjee@ovgu.de"
 __status__ = "Finished"
 
 ######Params configuration zone starts here
-useExistingMATs = True # [True/False] If an existing MAT file containing the sampling pattern (mask or om) is to be used.
-fullySampledPath = r'/run/media/soumick/Enterprise/Datasets/ADNI/NewSet2022/IXIOrientation/wPad256' #Root path containing fully sampled images (NIFTIs: .img, .nii, .nii.gz or DICOMs: .ima, .dcm)
+useExistingMATs = False # [True/False] If an existing MAT file containing the sampling pattern (mask or om) is to be used.
+fullySampledPath = r'/run/media/soumick/Enterprise/Datasets/IXI/ISO_Resampled2T2/T1' #Root path containing fully sampled images (NIFTIs: .img, .nii, .nii.gz or DICOMs: .ima, .dcm)
 min_scan_no = None # Will be only used for DICOMs. If a single folder contains DICOMs from multiple scans, then using this parameter the starting scan number can be mentioned. If set to None, then will start from the very beginning.
 max_scan_no = None #Will be only used for DICOMs. Similar to the last one, itdenotes the last scan that to be considered. If set to None, then scans will be considered till the very last.
-underSampledOutPath = r'/run/media/soumick/Enterprise/Datasets/ADNI/NewSet2022/IXIOrientation_Undersampled/wPad256' #Root path to store the undersampled output
-outFolder = r'2DVarden30Mask' #Inside the underSampledOutPath, this folder will be created. Inside which the undersampled results will be stored
+underSampledOutPath = r'/run/media/soumick/Enterprise/Datasets/IXI/ISO_Resampled2T2/BiLinear256/Under/T1' #Root path to store the undersampled output
+outFolder = r'CentreSquare6p25Mask' #Inside the underSampledOutPath, this folder will be created. Inside which the undersampled results will be stored
 zeropadOutput = True #By default set to True, when set to False doesn't zero pad the k-Space and decreases the pixel resolution of the output image. This should only be set True when using Cartesian CenterMasks
-keepOriginalFormat = False # [True/False] Will be only used for NIFTIs. Specifies whether to keep the original NIFTI extension (e.g. .img) or different file extension to be used while saving
+keepOriginalFormat = True # [True/False] Will be only used for NIFTIs. Specifies whether to keep the original NIFTI extension (e.g. .img) or different file extension to be used while saving
 saveFileFormat = '.nii.gz' # File extension to be used while saving the undersampled soutput. For NIFTIs, if keepOriginalFormat=True, then this will be ignored.
 nCoilElements = 0 # set it to zero if coil profile not needed
 
@@ -49,7 +50,7 @@ NormWithABS = True #If False then Real will be used, if true then ABS
 #Params for using MATs - will be ignored if useExistingMATs is False
 isRadial = False
 # mask_or_om_path = r"/home/soumick/ReadyRoom/GitHub/NCC1701/Cargo/Radial60spGA.mat"
-mask_or_om_path = r"/home/soumick/ReadyRoom/GitHub/NCC1701/Cargo/2DVarden30Mask.mat"
+mask_or_om_path = r""
 
 #Params for coil simulation
 relative_radius = 0.8 #for birdcage simulation
@@ -60,12 +61,13 @@ fullySampledCoilImgOutPath = r''#None# r'' #It will only be used when nCoilEleme
 recalculateUndersampling4Each = False
 staticSamplingFileName =  r'' #To be used if recalculateUndersampling4Each is set to False, to store the generated sampling pattern
 inputShape = (256,256) #This is a must have when not recalculating sampling patterns for each volume seperately. If recalculateUndersampling4Each set to True, then this is ignored. Also used when coil is not getting simulated for each
-croporpad = True
-fullySampledCropPaddedPath = ""#r'/run/media/soumick/Enterprise/Datasets/IXI/ISO_Resampled2T2/T1-BET-256'
+croporpad = False
+interpolate = True
+fullySampledCropPaddedPath = r"/run/media/soumick/Enterprise/Datasets/IXI/ISO_Resampled2T2/BiLinear256/T1"#r'/run/media/soumick/Enterprise/Datasets/IXI/ISO_Resampled2T2/T1-BET-256'
 
-undersamplingType = 1 #Cartesian Samplings := 0: Varden1D, 1: Varden2D, 2: Uniform, 3: CenterMaskPercent, 4: CenterMaskIgnoreLines, 5: CenterRatioMask, 6: CenterSquareMask, 7: High-frequency Mask 
+undersamplingType = 6 #Cartesian Samplings := 0: Varden1D, 1: Varden2D, 2: Uniform, 3: CenterMaskPercent, 4: CenterMaskIgnoreLines, 5: CenterRatioMask, 6: CenterSquareMask, 7: High-frequency Mask 
                       #Radial Samplings := 10: Golden Angle, 11: Equi-distance (Yet to be implimented)
-percentOfKSpace = 0.30 #[between 0 and 1] Percent of k-Space to be sampled. To be used for Cartesian samplings except undersamplingType = 2, 4
+percentOfKSpace = 0.0625 #[between 0 and 1] Percent of k-Space to be sampled. To be used for Cartesian samplings except undersamplingType = 2, 4
 stepsize = 4 #[arbitrary] Step size of k-Space sampling lines. To be used by Uniform sampling (Cartesian sampling : 2)
 lines2ignore = 10 #[arbitrary] How many lines to ignore from each side of the k-Space. To be used by CenterMaskIgnoreLines sampling (Cartesian sampling : 4)
 maxAmplitude4PDF = 0.5 #[between 0 and 1] compression factor of distribution. To be used by Varden1D and High-frequency Mask (Cartesian samplings : 0, 7)
@@ -111,15 +113,22 @@ if not simulate4each :
 else:
     csm = None
 
-def _croppad(fullImgVol, inplane_size, fullpath_file_fully=None):
+def _croppad_interpolate(fullImgVol, inplane_size, fullpath_file_fully=None):
     if len(fullImgVol.shape) == 3 and len(inplane_size) == 2:
         inplane_size += (fullImgVol.shape[-1],)
-    cop = tio.transforms.CropOrPad(inplane_size)
-    fullImgVol = cop(np.expand_dims(fullImgVol,axis=0))[0]
+    if croporpad:
+        cop = tio.transforms.CropOrPad(inplane_size)
+        fullImgVol = cop(np.expand_dims(fullImgVol,axis=0))[0]
+    elif interpolate:
+        fullImgVol = resize(fullImgVol, inplane_size)
     if bool(fullySampledCropPaddedPath) and fullpath_file_fully is not None:
         fullpath_file_cop = fullpath_file_fully.replace(fullySampledPath, fullySampledCropPaddedPath)
         os.makedirs(os.path.dirname(fullpath_file_cop), exist_ok=True)
-        FileSave(fullImgVol, fullpath_file_cop)
+        if ".npy" in fullpath_file_cop:
+            with open(fullpath_file_cop, 'wb') as f:
+                np.save(f, fullImgVol)
+        else:
+            FileSave(fullImgVol, fullpath_file_cop)
     return fullImgVol
     
 def _getCoilImages(fullImgVol, csm, fullpath_file_fully=None):
@@ -133,11 +142,16 @@ def _getCoilImages(fullImgVol, csm, fullpath_file_fully=None):
     if fullySampledCoilImgOutPath is not None and fullpath_file_fully is not None:
         fullpath_file_fullycoil = fullpath_file_fully.replace(fullySampledPath, fullySampledCoilImgOutPath)
         os.makedirs(os.path.dirname(fullpath_file_fullycoil), exist_ok=True)
-        if NormWithABS:
-            coilVol = abs(coilVolComplex)
+        if not np.iscomplexobj(fullImgVol):
+            if NormWithABS:
+                coilVol = abs(coilVolComplex)
+            else:
+                coilVol = coilVolComplex.real
+        if ".npy" in fullpath_file_fullycoil:
+            with open(fullpath_file_fullycoil, 'wb') as f:
+                np.save(f, coilVol)
         else:
-            coilVol = coilVolComplex.real
-        FileSave(coilVol, fullpath_file_fullycoil)
+            FileSave(coilVol, fullpath_file_fullycoil)
     return coilVolComplex
 
 def _undersample(fullImgVol, fullpath_file_under):
@@ -173,17 +187,46 @@ def _undersample(fullImgVol, fullpath_file_under):
                     underImgVol = cartUnder(fullImgVol, mask, zeropad=zeropadOutput)
                 else:
                     underImgVol = radUnder(fullImgVol, om, dcf, interpolationSize4NUFFT)
-        if NormWithABS:
-            underImgVol = abs(underImgVol)
-        else:
-            underImgVol = underImgVol.real
+        if not np.iscomplexobj(fullImgVol):
+            if NormWithABS:
+                underImgVol = abs(underImgVol)
+            else:
+                underImgVol = underImgVol.real
         underImgVol = underImgVol[:,:,::sliceUndersamplingFactor,...]
         if sliceZPadFourier:
             underImgVol = resample(x=underImgVol, num=fullImgVol.shape[2], axis=2)
                         
-        FileSave(underImgVol, fullpath_file_under)
+        if ".npy" in fullpath_file_under:
+            with open(fullpath_file_under, 'wb') as f:
+                np.save(f, underImgVol)
+        else:
+            FileSave(underImgVol, fullpath_file_under)
     except Exception as ex:
         print(ex)
+
+#Deal with Numpy Arrays (npy)
+types = ('.npy') # the tuple of file types
+files = []
+for type in types:
+    files.extend(glob.glob(fullySampledPath+'/**/*'+type, recursive=True))
+#files = glob.glob(fullySampledPath+'/**/*.img', recursive=True)
+
+for fullpath_file_fully in tqdm(files):
+    with open(fullpath_file_fully, 'rb') as f:
+        fullImgVol = np.load(f)
+    fullImgVol = _croppad_interpolate(fullImgVol, inputShape, fullpath_file_fully) if croporpad or interpolate else fullImgVol
+    if safeSliceUndersampling and fullImgVol.shape[-1] % sliceUndersamplingFactor != 0:
+        print("Skipping as nSlice not divisable by slice undersampling factor")
+        continue
+
+    fullpath_file_under = fullpath_file_fully.replace(fullySampledPath, underSampledOutPath)
+    os.makedirs(os.path.dirname(fullpath_file_under), exist_ok=True) #create directorries if doesnt exist
+    # if not keepOriginalFormat: #It has to be the original format. Npy has no alternatives.
+    #     filename, _ = os.path.splitext(fullpath_file_under)
+    #     fullpath_file_under = filename + saveFileFormat
+    if nCoilElements != 0:
+        fullImgVol = _getCoilImages(fullImgVol, csm, fullpath_file_fully)
+    _undersample(fullImgVol, fullpath_file_under)
 
 #Deal with NIFTI
 types = ('.img', '.nii', '.nii.gz') # the tuple of file types
@@ -194,7 +237,7 @@ for type in types:
 
 for fullpath_file_fully in tqdm(files):
     fullImgVol = FileRead(fullpath_file_fully).squeeze() #Squeeze to remove channel dim if only one channel
-    fullImgVol = _croppad(fullImgVol, inputShape, fullpath_file_fully) if croporpad else fullImgVol
+    fullImgVol = _croppad_interpolate(fullImgVol, inputShape, fullpath_file_fully) if croporpad or interpolate else fullImgVol
     if safeSliceUndersampling and fullImgVol.shape[-1] % sliceUndersamplingFactor != 0:
         print("Skipping as nSlice not divisable by slice undersampling factor")
         continue
@@ -232,7 +275,7 @@ for file in tqdm(files):
 
 for identifier, files in tqdm(dicoms.items()):
     fullImgVol = ListRead(files).squeeze() #Squeeze to remove channel dim if only one channel
-    fullImgVol = _croppad(fullImgVol, inputShape, fullpath_file_fully) if croporpad else fullImgVol
+    fullImgVol = _croppad_interpolate(fullImgVol, inputShape, fullpath_file_fully) if croporpad or interpolate else fullImgVol
     if safeSliceUndersampling and fullImgVol.shape[-1] % sliceUndersamplingFactor != 0:
         print("Skipping as nSlice not divisable by slice undersampling factor")
         continue
@@ -241,7 +284,7 @@ for identifier, files in tqdm(dicoms.items()):
     fullpath_file_under = fullpath_fully.replace(fullySampledPath, underSampledOutPath) + identifier + saveFileFormat
     os.makedirs(os.path.dirname(fullpath_file_under), exist_ok=True) #create directorries if doesnt exist
 
-    fullImgVol = _croppad(fullImgVol, inputShape, fullpath_file_fully) if croporpad else fullImgVol
+    fullImgVol = _croppad_interpolate(fullImgVol, inputShape, fullpath_file_fully) if croporpad or interpolate else fullImgVol
     if nCoilElements != 0:
         fullImgVol = _getCoilImages(fullImgVol, csm, fullpath_file_fully)
     _undersample(fullImgVol, fullpath_file_under)
