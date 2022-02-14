@@ -92,8 +92,41 @@ def _mask1DForROdir(mask, percent, maxAmplitude4PDF, ROdir, distfunc=None, rands
 
     return mask, distfunc, randseed
 
-def createVardenMask2D(slice, percent, returnPDF=False):
-    #AKA Gauss Mask
+def createVardenMask2D(slice, percent, maxAmplitude4PDF, centrePercent=0.005, dualFWHM=False, returnPDF=False):   
+    #AKA Gauss Mask (New version)
+
+    xv, yv = np.meshgrid(np.arange(-1,1,2/slice.shape[0]), np.arange(-1,1,2/slice.shape[1]), indexing="ij")
+    r = np.sqrt(0.04*(centrePercent*100)/np.pi) #converting centrePercent from 0-1 to 0-100
+    w1 = 2                  # full width at half maximum (FWHM) 
+    # maxAmplitude4PDF = 0.3                 # 0 < a <= 1 ,tweak distribution height to influence the ksp sampling towards the edges
+    w2 = 2                  # FWHM, in y direction if needed, -> comment out below
+
+    currentPercent=1     
+    while currentPercent > percent:          
+        if dualFWHM:
+            u =  maxAmplitude4PDF*np.exp(-(4*np.log(2)) * (xv**2)/w1**2 + (yv**2)/w2**2 )  # separate FWHM in x and y direction
+        else:
+            u =  maxAmplitude4PDF*np.exp(-(4*np.log(2)) * (xv**2+yv**2)/w1**2 )
+
+        #cast into binary mask
+        randseed = np.random.random(u.shape)
+        mask = np.zeros(u.shape)
+
+        mask[(xv**2+yv**2)<=r**2] = 1       # hardcore
+        mask[randseed<u] = 1        # softcore
+        PDF = u                             # probability density function of the non-uniform sampling
+
+        #close in on target percentage
+        currentPercent = np.count_nonzero(mask)/mask.size
+        w1 = 0.99*w1
+
+    if returnPDF:
+        return mask, PDF
+    else:
+        return mask
+
+def createVardenMask2Dv0(slice, percent, returnPDF=False):
+    #AKA Gauss Mask (Old version)
     
     #Xie1 = 1000
     #Xie2 = 10000

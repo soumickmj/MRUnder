@@ -28,9 +28,10 @@ __status__ = "Finished"
 class Sampler(object):
     """description of class"""
 
-    def __init__(self, undersamplingType, percentOfKSpace, stepsize, lines2ignore, maxAmplitude4PDF, ROdir, noOfSpokes, fullresSpokesMulFactor, interpolationSize, sliceShape=None):
+    def __init__(self, undersamplingType, percentOfKSpace, centrePercent, stepsize, lines2ignore, maxAmplitude4PDF, ROdir, noOfSpokes, fullresSpokesMulFactor, interpolationSize, sliceShape=None):
         assert undersamplingType in list(range(0,7+1))+list(range(10,11+1)), 'Unrecognized undersamplingType'
         assert 0 <= percentOfKSpace <= 1, 'Invalid percentOfKSpace'
+        assert 0 <= centrePercent <= 1, 'Invalid centrePercent'
         assert 0 <= maxAmplitude4PDF <= 1, 'Invalid maxAmplitude4PDF'
         assert ROdir in [0,1,2], 'Invalid ROdir'
 
@@ -39,6 +40,7 @@ class Sampler(object):
 
         self.undersamplingType = undersamplingType
         self.percentOfKSpace = percentOfKSpace
+        self.centrePercent = centrePercent
         self.stepsize = stepsize
         self.lines2ignore = lines2ignore
         self.maxAmplitude4PDF = maxAmplitude4PDF
@@ -70,9 +72,9 @@ class Sampler(object):
             metaname = 'PDF'
             samplingname = 'VardenMask1D_percent'+str(self.percentOfKSpace)+'_maxamp'+str(self.maxAmplitude4PDF)+'_rodir'+str(self.ROdir)
         elif self.undersamplingType == 1: #Varden2D
-            data = createVardenMask2D(slice, self.percentOfKSpace, returnMeta)
+            data = createVardenMask2D(slice, self.percentOfKSpace, self.maxAmplitude4PDF, centrePercent=self.centrePercent, returnPDF=returnMeta)
             metaname = 'PDF'
-            samplingname = 'VardenMask2D_percent'+str(self.percentOfKSpace)
+            samplingname = 'VardenMask2D_percent'+str(self.percentOfKSpace)+'_maxamp'+str(self.maxAmplitude4PDF)+'_centrePercent'+str(self.centrePercent)
         elif self.undersamplingType == 2: #Uniform
             data = createUniformMask(slice, self.stepsize, self.ROdir, returnMeta)
             metaname = 'percentOfKSpace'
@@ -96,6 +98,10 @@ class Sampler(object):
             data = createHighFreqMask(slice, self.percentOfKSpace, self.maxAmplitude4PDF, self.ROdir, returnMeta)
             metaname = 'PDF'
             samplingname = '#HighFreqMask_percent'+str(self.percentOfKSpace)+'_maxamp'+str(self.maxAmplitude4PDF)+'_rodir'+str(self.ROdir)
+        elif self.undersamplingType == 8: #Varden2Dv0
+            data = createVardenMask2Dv0(slice, self.percentOfKSpace, returnMeta)
+            metaname = 'PDF'
+            samplingname = 'VardenMask2Dv0_percent'+str(self.percentOfKSpace)
         elif self.undersamplingType == 10: #Golden Angle
             data = {}
             if not bool(self.noOfSpokes):

@@ -65,9 +65,10 @@ croporpad = False
 interpolate = True
 fullySampledCropPaddedPath = r"/run/media/soumick/Enterprise/Datasets/IXI/ISO_Resampled2T2/BiLinear256/T1"#r'/run/media/soumick/Enterprise/Datasets/IXI/ISO_Resampled2T2/T1-BET-256'
 
-undersamplingType = 6 #Cartesian Samplings := 0: Varden1D, 1: Varden2D, 2: Uniform, 3: CenterMaskPercent, 4: CenterMaskIgnoreLines, 5: CenterRatioMask, 6: CenterSquareMask, 7: High-frequency Mask 
+undersamplingType = 6 #Cartesian Samplings := 0: Varden1D, 1: Varden2D (updated version, old version is type 8 now), 2: Uniform, 3: CenterMaskPercent, 4: CenterMaskIgnoreLines, 5: CenterRatioMask, 6: CenterSquareMask, 7: High-frequency Mask, 8: Varden2Dv0 (Old version of Varden2D)
                       #Radial Samplings := 10: Golden Angle, 11: Equi-distance (Yet to be implimented)
 percentOfKSpace = 0.0625 #[between 0 and 1] Percent of k-Space to be sampled. To be used for Cartesian samplings except undersamplingType = 2, 4
+centrePercent = 0.005 #[between 0 and 1] Percent of Centre of the k-Space to be sampled. To be used for Cartesian sampling Varden2D, undersamplingType = 1
 stepsize = 4 #[arbitrary] Step size of k-Space sampling lines. To be used by Uniform sampling (Cartesian sampling : 2)
 lines2ignore = 10 #[arbitrary] How many lines to ignore from each side of the k-Space. To be used by CenterMaskIgnoreLines sampling (Cartesian sampling : 4)
 maxAmplitude4PDF = 0.5 #[between 0 and 1] compression factor of distribution. To be used by Varden1D and High-frequency Mask (Cartesian samplings : 0, 7)
@@ -95,7 +96,7 @@ else:
     if recalculateUndersampling4Each:
         inputShape = None
 
-    sampler = Sampler(undersamplingType, percentOfKSpace, stepsize, lines2ignore, maxAmplitude4PDF, ROdir, noOfSpokes, fullresSpokesMulFactor, interpolationSize4NUFFT, inputShape)
+    sampler = Sampler(undersamplingType, percentOfKSpace, centrePercent, stepsize, lines2ignore, maxAmplitude4PDF, ROdir, noOfSpokes, fullresSpokesMulFactor, interpolationSize4NUFFT, inputShape)
     isRadial = sampler.isRadial
 
     if not recalculateUndersampling4Each:
