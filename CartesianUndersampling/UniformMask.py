@@ -24,10 +24,7 @@ def createUniformMask(slice, stepsize, ROdir, returnPercent=False):
     else:
         mask = _maskForROdir(mask, stepsize, ROdir)
 
-    if returnPercent:
-        return mask, np.count_nonzero(mask)/mask.size
-    else:
-        return mask
+    return (mask, np.count_nonzero(mask)/mask.size) if returnPercent else mask
 
 def _maskForROdir(mask, stepsize, ROdir):
     shape = mask.shape[ROdir]

@@ -45,16 +45,13 @@ def createCenterMaskIgnoreLines(slice, lines2ignore, returnPercent=False):
     mask[:, 0:lines2ignore] = 0
     mask[:, slice.shape[1]-lines2ignore:] = 0
 
-    if returnPercent:
-        return mask, np.count_nonzero(mask)/mask.size
-    else:
-        return mask
+    return (mask, np.count_nonzero(mask)/mask.size) if returnPercent else mask
 
 def createCenterRatioMask(slice, percent, returnNumLinesRemoved=False):
     dim1 = slice.shape[0]
     dim2 = slice.shape[1]
     ratio = dim2/dim1
-    
+
     mask = np.ones(slice.shape)
     dim1_now = dim1
     dim2_should = dim2
@@ -75,7 +72,7 @@ def createCenterRatioMask(slice, percent, returnNumLinesRemoved=False):
 
         currentPercent = np.count_nonzero(mask)/mask.size
 
-   
+
     if returnNumLinesRemoved:
         linesRemoved_dim1 = dim1 - dim1_now
         linesRemoved_dim2 = dim2 - dim2_should
@@ -86,7 +83,7 @@ def createCenterRatioMask(slice, percent, returnNumLinesRemoved=False):
 def createCenterSquareMask(slice, percent, returnNumLinesRemoved=False):
     dim1 = slice.shape[0]
     dim2 = slice.shape[1]
-    
+
     mask = np.ones(slice.shape)
 
     if(dim1 > dim2):
@@ -115,7 +112,7 @@ def createCenterSquareMask(slice, percent, returnNumLinesRemoved=False):
 
     linesRemoved_dim1 = linesRemoved_dim1 + (i*2)
     linesRemoved_dim2 = linesRemoved_dim2 + (i*2)
-   
+
     if returnNumLinesRemoved:
         return mask, (linesRemoved_dim1, linesRemoved_dim2)
     else:

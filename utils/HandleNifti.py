@@ -27,10 +27,7 @@ def ChooseFileNRead(Read3D=True):
     root = tk.Tk()
     root.withdraw()
     file_path = filedialog.askopenfilename()
-    if(Read3D):
-        return FileRead3D(file_path)
-    else:
-        return FileRead2D(file_path)
+    return FileRead3D(file_path) if Read3D else FileRead2D(file_path)
 
 def FileRead(file_path, expand_last_dim=False):
     """Read a NIFTI file (3D) using given file path as an array
@@ -78,23 +75,32 @@ def FileSave(data, file_path):
 def Nifti3Dto2D(Nifti3D):
     """Converts From 3D NIFTI to 2D
     Preserves channel info"""
-    Nifti2D = Nifti3D.reshape(np.shape(Nifti3D)[0], np.shape(Nifti3D)[1] * np.shape(Nifti3D)[2], np.shape(Nifti3D)[3])
-    return Nifti2D
+    return Nifti3D.reshape(
+        np.shape(Nifti3D)[0],
+        np.shape(Nifti3D)[1] * np.shape(Nifti3D)[2],
+        np.shape(Nifti3D)[3],
+    )
 
 def Nifti2Dto3D(Nifti2D):
     """Converts From 2D NIFTI to 3D
     Preserves channel info"""
-    Nifti3D = Nifti2D.reshape(np.shape(Nifti2D)[0],np.shape(Nifti2D)[0],int(np.shape(Nifti2D)[1]/np.shape(Nifti2D)[0]), np.shape(Nifti2D)[2])
-    return Nifti3D
+    return Nifti2D.reshape(
+        np.shape(Nifti2D)[0],
+        np.shape(Nifti2D)[0],
+        int(np.shape(Nifti2D)[1] / np.shape(Nifti2D)[0]),
+        np.shape(Nifti2D)[2],
+    )
 
-def Nifti2Dto1D(Nifti2D): 
+def Nifti2Dto1D(Nifti2D):
     """Converts From 2D NIFTI to 1D
     No Sperate channel info left. It's now all merged together"""
-    Nifti1D = Nifti2D.reshape(np.shape(Nifti2D)[0] * np.shape(Nifti2D)[1] * np.shape(Nifti2D)[2])
-    return Nifti1D
+    return Nifti2D.reshape(
+        np.shape(Nifti2D)[0] * np.shape(Nifti2D)[1] * np.shape(Nifti2D)[2]
+    )
 
 def Nifti1Dto2D(Nifti1D, height, n_channel):
     """Converts From 1D NIFTI to 2D
     No of Channel introduced seperately"""
-    Nifti2D = Nifti1D.reshape(height,int((np.shape(Nifti1D)[0]/height)/n_channel), n_channel)
-    return Nifti2D
+    return Nifti1D.reshape(
+        height, int((np.shape(Nifti1D)[0] / height) / n_channel), n_channel
+    )

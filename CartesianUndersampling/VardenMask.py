@@ -47,13 +47,12 @@ def createVardenMask1D(slice, percent, maxAmplitude4PDF, ROdir, returnPDF=False)
     else:
         mask, distfunc, _ = _mask1DForROdir(mask, percent, maxAmplitude4PDF, ROdir)
 
-    if returnPDF:
-        if slice.shape[0] > slice.shape[1]:
-            return mask, np.tile(distfunc,(slice.shape[1],1))
-        else:
-            return mask, np.tile(distfunc,(slice.shape[0],1))
-    else:
+    if not returnPDF:
         return mask
+    if slice.shape[0] > slice.shape[1]:
+        return mask, np.tile(distfunc,(slice.shape[1],1))
+    else:
+        return mask, np.tile(distfunc,(slice.shape[0],1))
 
 def _mask1DForROdir(mask, percent, maxAmplitude4PDF, ROdir, distfunc=None, randseed=None):
     shape = mask.shape[ROdir]
@@ -101,7 +100,7 @@ def createVardenMask2D(slice, percent, maxAmplitude4PDF, centrePercent=0.005, du
     # maxAmplitude4PDF = 0.3                 # 0 < a <= 1 ,tweak distribution height to influence the ksp sampling towards the edges
     w2 = 2                  # FWHM, in y direction if needed, -> comment out below
 
-    currentPercent=1     
+    currentPercent=1
     while currentPercent > percent:          
         if dualFWHM:
             u =  maxAmplitude4PDF*np.exp(-(4*np.log(2)) * (xv**2)/w1**2 + (yv**2)/w2**2 )  # separate FWHM in x and y direction
@@ -120,37 +119,34 @@ def createVardenMask2D(slice, percent, maxAmplitude4PDF, centrePercent=0.005, du
         currentPercent = np.count_nonzero(mask)/mask.size
         w1 = 0.99*w1
 
-    if returnPDF:
-        return mask, PDF
-    else:
-        return mask
+    return (mask, PDF) if returnPDF else mask
 
 def createVardenMask2Dv0(slice, percent, returnPDF=False):
     #AKA Gauss Mask (Old version)
-    
+
     #Xie1 = 1000
     #Xie2 = 10000
-    
+
     #r1 = 0.8
     #r2 = 1.3
-     
+
     #creates a mask that captures approximately 50% of the k-space data
     #with SIGMA old 15% -> new: compression factor Xie / (2 * pi)
 
     sigma = 1
     currentPercent=1
-    while currentPercent > percent:         
+    s = 0 #diagonal extension of distribution - / +
+    r1 = 1.3 #> = 1, Determines the size of the full coverage of the k-space center, the height of the distribution 1
+    r2 = 0.60 #<= 1, influence on the probabilities in the edge of the k-space, height of the distribution 2
+
+    while currentPercent > percent:     
         #Random Numbers Seed
         randseed = np.random.random(slice.shape)
         Xie1 = 5000/(2*math.pi) #Sharpness of the distribution 1, 0 <r <r0
         Xie2 = sigma*1000000/(2*math.pi) #Sharpness of distribution 2, r0 <r <r_max
-        s = 0 #diagonal extension of distribution - / +
-        r1 = 1.3 #> = 1, Determines the size of the full coverage of the k-space center, the height of the distribution 1
-        r2 = 0.60 #<= 1, influence on the probabilities in the edge of the k-space, height of the distribution 2
-
         #Fit to mask size
         x1 = np.array(range(slice.shape[0]))
-        x2 = np.array(range(slice.shape[1]))     
+        x2 = np.array(range(slice.shape[1]))
         X1, X2 = np.meshgrid(x1,x2) 
 
         #Distribution function 0 <r <r0
@@ -176,8 +172,8 @@ def createVardenMask2Dv0(slice, percent, returnPDF=False):
         mask = np.zeros(slice.shape)
         #mask[A>F2] = 0 #not needed
         #mask[A>F1] = 0 #not needed 
-        mask[randseed<F2] = 1 
-        mask[randseed<F1] = 1 
+        mask[randseed<F2] = 1
+        mask[randseed<F1] = 1
         PDF = F1
         idx = PDF <= F2
         PDF[idx] = F2[idx]
@@ -186,7 +182,4 @@ def createVardenMask2Dv0(slice, percent, returnPDF=False):
         currentPercent = np.count_nonzero(mask)/mask.size
         sigma = 0.95*sigma
 
-    if returnPDF:
-        return mask, PDF
-    else:
-        return mask
+    return (mask, PDF) if returnPDF else mask

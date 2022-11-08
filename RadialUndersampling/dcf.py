@@ -21,5 +21,4 @@ def generateDCF(spokes, baseresolution):
     for i in range(baseresolution):
        dcfRow[i]=np.abs(baseresolution/2-(i-0.5))
     dcfRow=math.pi/spokes*dcfRow
-    dcf=np.tile(dcfRow,(spokes,1)).transpose()
-    return dcf
+    return np.tile(dcfRow,(spokes,1)).transpose()

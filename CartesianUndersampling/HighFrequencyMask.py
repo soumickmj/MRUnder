@@ -40,13 +40,12 @@ def createHighFreqMask(slice, percent, compressFactOfDist, ROdir, returnPDF=Fals
     else:
         mask, distfunc, _ = _mask1DForROdir(mask, percent, compressFactOfDist, ROdir)
 
-    if returnPDF:
-        if slice.shape[0] > slice.shape[1]:
-            return mask, np.tile(distfunc,(slice.shape[1],1))
-        else:
-            return mask, np.tile(distfunc,(slice.shape[0],1))
-    else:
+    if not returnPDF:
         return mask
+    if slice.shape[0] > slice.shape[1]:
+        return mask, np.tile(distfunc,(slice.shape[1],1))
+    else:
+        return mask, np.tile(distfunc,(slice.shape[0],1))
 
 def _mask1DForROdir(mask, percent, compressFactOfDist, ROdir, distfunc=None, randseed=None):
     shape = mask.shape[ROdir]
@@ -55,7 +54,7 @@ def _mask1DForROdir(mask, percent, compressFactOfDist, ROdir, distfunc=None, ran
         randseed = np.random.random(shape)
 
         #Initialize variables
-        x = np.array(range(-math.floor(shape/2)+1,math.floor(shape/2)+1,1))
+        x = np.array(range(-math.floor(shape/2)+1, math.floor(shape/2)+1))
         xm = math.ceil(x.size/2)
         #mu = 0.5 ;
 

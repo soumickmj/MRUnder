@@ -1,18 +1,15 @@
 def getMaxSubSquare(M):
     R = len(M) # no. of rows in M[][]
     C = len(M[0]) # no. of columns in M[][]
- 
+
     S = []
     for i in range(R):
-      temp = []
-      for j in range(C):
-        if i==0 or j==0:
-          temp += M[i][j],
-        else:
-          temp += 0,
-      S += temp,
+        temp = []
+        for j in range(C):
+            temp += (M[i][j], ) if i==0 or j==0 else (0, )
+        S += temp,
     # here we have set the first row and first column of S same as input matrix, other entries are set to 0
- 
+
     # Update other entries
     for i in range(1, R):
         for j in range(1, C):
@@ -21,7 +18,7 @@ def getMaxSubSquare(M):
                             S[i-1][j-1]) + 1
             else:
                 S[i][j] = 0
-     
+
     # Find the maximum entry and
     # indices of maximum entry in S[][]
     max_of_s = S[0][0]
