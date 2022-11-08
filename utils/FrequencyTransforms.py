@@ -43,12 +43,26 @@ __status__ = "Finished, but more might be added later"
 
 #Standard Fourier Transform - 1D
 def fftc(x, fixedLen=None, axis=-1, shiftAxes = None, normalize=None):
-    f = np.fft.fftshift(np.fft.fft(np.fft.ifftshift(x, axes=shiftAxes), n=fixedLen, axis=axis, norm=normalize), axes=shiftAxes)
-    return f
+    return np.fft.fftshift(
+        np.fft.fft(
+            np.fft.ifftshift(x, axes=shiftAxes),
+            n=fixedLen,
+            axis=axis,
+            norm=normalize,
+        ),
+        axes=shiftAxes,
+    )
 
 def ifftc(x, fixedLen=None, axis=-1, normalize=None):
-    f = np.fft.fftshift(np.fft.ifft(np.fft.ifftshift(x, axes=shiftAxes), n=fixedLen, axis=axis, norm=normalize), axes=shiftAxes)
-    return f   
+    return np.fft.fftshift(
+        np.fft.ifft(
+            np.fft.ifftshift(x, axes=shiftAxes),
+            n=fixedLen,
+            axis=axis,
+            norm=normalize,
+        ),
+        axes=shiftAxes,
+    )   
 
 #Standard Fourier Transform - 2D
 #def fft2c(x, shape=None, axes=(0,1), shiftAxes = (0,1), normalize=None): # originally was axes=(-2,-1), shiftAxes = None
@@ -93,41 +107,97 @@ def ifft2c(x, shape=None, axes=(0,1), shiftAxes = (0,1), normalize=None): # orig
 
 #Standard Fourier Transform - nD
 def fftNc(x, shape=None, axes=None, shiftAxes = None, normalize=None):
-    f = np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(x, axes=shiftAxes), s=shape, axes=axes, norm=normalize), axes=shiftAxes)
-    return f
+    return np.fft.fftshift(
+        np.fft.fftn(
+            np.fft.ifftshift(x, axes=shiftAxes),
+            s=shape,
+            axes=axes,
+            norm=normalize,
+        ),
+        axes=shiftAxes,
+    )
 
 def ifftNc(x, shape=None, axes=None, shiftAxes = None, normalize=None):
-    f = np.fft.fftshift(np.fft.ifftn(np.fft.ifftshift(x, axes=shiftAxes), s=shape, axes=axes, norm=normalize), axes=shiftAxes)
-    return f
+    return np.fft.fftshift(
+        np.fft.ifftn(
+            np.fft.ifftshift(x, axes=shiftAxes),
+            s=shape,
+            axes=axes,
+            norm=normalize,
+        ),
+        axes=shiftAxes,
+    )
 
 ### Real Fourier Transform
 
 #Real Fourier Transform - 1D
 def rfftc(x, fixedLen=None, axis=-1, shiftAxes = None, normalize=None):
-    f = np.fft.fftshift(np.fft.rfft(np.fft.ifftshift(x, axes=shiftAxes), n=fixedLen, axis=axis, norm=normalize), axes=shiftAxes)
-    return f
+    return np.fft.fftshift(
+        np.fft.rfft(
+            np.fft.ifftshift(x, axes=shiftAxes),
+            n=fixedLen,
+            axis=axis,
+            norm=normalize,
+        ),
+        axes=shiftAxes,
+    )
 
 def irfftc(x, fixedLen=None, axis=-1, normalize=None):
-    f = np.fft.fftshift(np.fft.irfft(np.fft.ifftshift(x, axes=shiftAxes), n=fixedLen, axis=axis, norm=normalize), axes=shiftAxes)
-    return f   
+    return np.fft.fftshift(
+        np.fft.irfft(
+            np.fft.ifftshift(x, axes=shiftAxes),
+            n=fixedLen,
+            axis=axis,
+            norm=normalize,
+        ),
+        axes=shiftAxes,
+    )   
 
 #Real Fourier Transform - 2D
 def rfft2c(x, shape=None, axes=(0,1), shiftAxes = (0,1), normalize=None): # originally was axes=(-2,-1), shiftAxes = None
-    f = np.fft.fftshift(np.fft.rfft2(np.fft.ifftshift(x, axes=shiftAxes), s=shape, axes=axes, norm=normalize), axes=shiftAxes)
-    return f
+    return np.fft.fftshift(
+        np.fft.rfft2(
+            np.fft.ifftshift(x, axes=shiftAxes),
+            s=shape,
+            axes=axes,
+            norm=normalize,
+        ),
+        axes=shiftAxes,
+    )
 
 def irfft2c(x, shape=None, axes=(0,1), shiftAxes = (0,1), normalize=None): # originally was axes=(-2,-1), shiftAxes = None
-    f = np.fft.fftshift(np.fft.irfft2(np.fft.ifftshift(x, axes=shiftAxes), s=shape, axes=axes, norm=normalize), axes=shiftAxes)
-    return f
+    return np.fft.fftshift(
+        np.fft.irfft2(
+            np.fft.ifftshift(x, axes=shiftAxes),
+            s=shape,
+            axes=axes,
+            norm=normalize,
+        ),
+        axes=shiftAxes,
+    )
 
 #Real Fourier Transform - nD
 def rfftNc(x, shape=None, axes=None, shiftAxes = None, normalize=None):
-    f = np.fft.fftshift(np.fft.rfftn(np.fft.ifftshift(x, axes=shiftAxes), s=shape, axes=axes, norm=normalize), axes=shiftAxes)
-    return f
+    return np.fft.fftshift(
+        np.fft.rfftn(
+            np.fft.ifftshift(x, axes=shiftAxes),
+            s=shape,
+            axes=axes,
+            norm=normalize,
+        ),
+        axes=shiftAxes,
+    )
 
 def irfftNc(x, shape=None, axes=None, shiftAxes = None, normalize=None):
-    f = np.fft.fftshift(np.fft.irfftn(np.fft.ifftshift(x, axes=shiftAxes), s=shape, axes=axes, norm=normalize), axes=shiftAxes)
-    return f
+    return np.fft.fftshift(
+        np.fft.irfftn(
+            np.fft.ifftshift(x, axes=shiftAxes),
+            s=shape,
+            axes=axes,
+            norm=normalize,
+        ),
+        axes=shiftAxes,
+    )
 
 
 ### Fourier Space to Magnitude and Phase 
@@ -151,12 +221,18 @@ def fhtc(x, fixedLen=None, axis=-1, shiftAxes = None, norm_with_fnorm=False, use
         f = fftc(x, fixedLen=fixedLen, axis=axis, shiftAxes = shiftAxes, normalize=normalize)
     if(norm_with_fnorm):
         f = fnorm(f)
-    h = f.real - f.imag
-    return h
+    return f.real - f.imag
 
 def ifhtc(x, fixedLen=None, axis=-1, shiftAxes = None, norm_with_fnorm=False, use_real_fourier=False, normalize=None):
-    h = fhtc(x, fixedLen=fixedLen, axis=axis, shiftAxes = shiftAxes, norm_with_fnorm=norm_with_fnorm, use_real_fourier=use_real_fourier, normalize=normalize) #Based on Hartley Transform algo x = H(H(x))
-    return h 
+    return fhtc(
+        x,
+        fixedLen=fixedLen,
+        axis=axis,
+        shiftAxes=shiftAxes,
+        norm_with_fnorm=norm_with_fnorm,
+        use_real_fourier=use_real_fourier,
+        normalize=normalize,
+    ) 
 
 #Hartley Transform - 2D
 def fht2c(x, shape=None, axes=(0,1), shiftAxes = (0,1), norm_with_fnorm=False, use_real_fourier=False, normalize=None): # originally was axes=(-2,-1), shiftAxes = None
@@ -166,12 +242,18 @@ def fht2c(x, shape=None, axes=(0,1), shiftAxes = (0,1), norm_with_fnorm=False, u
         f = fft2c(x, shape=shape, axes=axes, shiftAxes = shiftAxes, normalize=normalize)
     if(norm_with_fnorm):
         f = fnorm(f)
-    h = f.real - f.imag
-    return h
+    return f.real - f.imag
  
 def ifht2c(x, shape=None, axes=(0,1), shiftAxes = (0,1), norm_with_fnorm=False, use_real_fourier=False, normalize=None): # originally was axes=(-2,-1), shiftAxes = None
-    h = fht2c(x, shape=shape, axes=axes, shiftAxes = shiftAxes, norm_with_fnorm=norm_with_fnorm, use_real_fourier=use_real_fourier, normalize=normalize) #Based on Hartley Transform algo x = H(H(x))
-    return h 
+    return fht2c(
+        x,
+        shape=shape,
+        axes=axes,
+        shiftAxes=shiftAxes,
+        norm_with_fnorm=norm_with_fnorm,
+        use_real_fourier=use_real_fourier,
+        normalize=normalize,
+    ) 
 
 #Hartley Transform - nD
 def fhtNc(x, shape=None, axes=None, shiftAxes = None, norm_with_fnorm=False, use_real_fourier=False, normalize=None):
@@ -181,12 +263,18 @@ def fhtNc(x, shape=None, axes=None, shiftAxes = None, norm_with_fnorm=False, use
         f = fftNc(x, shape=shape, axes=axes, shiftAxes = shiftAxes, normalize=normalize)
     if(norm_with_fnorm):
         f = fnorm(f)
-    h = f.real - f.imag
-    return h
+    return f.real - f.imag
 
 def ifhtNc(x, shape=None, axes=None, shiftAxes = None, norm_with_fnorm=False, normalize=None):
-    h = fhtNc(x, shape=shape, axes=axes, shiftAxes = shiftAxes, norm_with_fnorm=norm_with_fnorm, use_real_fourier=use_real_fourier, normalize=normalize) #Based on Hartley Transform algo x = H(H(x))
-    return h 
+    return fhtNc(
+        x,
+        shape=shape,
+        axes=axes,
+        shiftAxes=shiftAxes,
+        norm_with_fnorm=norm_with_fnorm,
+        use_real_fourier=use_real_fourier,
+        normalize=normalize,
+    ) 
 
 
 #########Normalization functions

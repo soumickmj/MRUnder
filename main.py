@@ -5,6 +5,7 @@ This is the main module, entry point to the pipeline.
 All parameters have to be configured here
 """
 
+
 import glob
 import os
 from pathlib import Path
@@ -66,7 +67,6 @@ interpolate = True
 fullySampledCropPaddedPath = r"/run/media/soumick/Enterprise/Datasets/IXI/ISO_Resampled2T2/BiLinear256/T1"#r'/run/media/soumick/Enterprise/Datasets/IXI/ISO_Resampled2T2/T1-BET-256'
 
 undersamplingType = 6 #Cartesian Samplings := 0: Varden1D, 1: Varden2D (updated version, old version is type 8 now), 2: Uniform, 3: CenterMaskPercent, 4: CenterMaskIgnoreLines, 5: CenterRatioMask, 6: CenterSquareMask, 7: High-frequency Mask, 8: Varden2Dv0 (Old version of Varden2D)
-                      #Radial Samplings := 10: Golden Angle, 11: Equi-distance (Yet to be implimented)
 percentOfKSpace = 0.0625 #[between 0 and 1] Percent of k-Space to be sampled. To be used for Cartesian samplings except undersamplingType = 2, 4
 centrePercent = 0.005 #[between 0 and 1] Percent of Centre of the k-Space to be sampled. To be used for Cartesian sampling Varden2D, undersamplingType = 1
 stepsize = 4 #[arbitrary] Step size of k-Space sampling lines. To be used by Uniform sampling (Cartesian sampling : 2)
@@ -109,10 +109,11 @@ else:
         sio.savemat(staticSamplingFileName, samplings)
 
 
-if not simulate4each :
-    csm = generateBirdcageCSM(inputShape, nCoilElements, relative_radius)
-else:
-    csm = None
+csm = (
+    None
+    if simulate4each
+    else generateBirdcageCSM(inputShape, nCoilElements, relative_radius)
+)
 
 def _croppad_interpolate(fullImgVol, inplane_size, fullpath_file_fully=None):
     if len(fullImgVol.shape) == 3 and len(inplane_size) == 2:
@@ -134,7 +135,7 @@ def _croppad_interpolate(fullImgVol, inplane_size, fullpath_file_fully=None):
     
 def _getCoilImages(fullImgVol, csm, fullpath_file_fully=None):
     if csm is None:
-        csm = generateBirdcageCSM(fullImgVol.shape[0:2], nCoilElements, relative_radius)
+        csm = generateBirdcageCSM(fullImgVol.shape[:2], nCoilElements, relative_radius)
     coilVolComplex = np.zeros(fullImgVol.shape+(nCoilElements,), dtype=np.complex64)
     for i in range(fullImgVol.shape[-1]):
         img = fullImgVol[...,i]
@@ -144,10 +145,7 @@ def _getCoilImages(fullImgVol, csm, fullpath_file_fully=None):
         fullpath_file_fullycoil = fullpath_file_fully.replace(fullySampledPath, fullySampledCoilImgOutPath)
         os.makedirs(os.path.dirname(fullpath_file_fullycoil), exist_ok=True)
         if not np.iscomplexobj(fullImgVol):
-            if NormWithABS:
-                coilVol = abs(coilVolComplex)
-            else:
-                coilVol = coilVolComplex.real
+            coilVol = abs(coilVolComplex) if NormWithABS else coilVolComplex.real
         if ".npy" in fullpath_file_fullycoil:
             with open(fullpath_file_fullycoil, 'wb') as f:
                 np.save(f, coilVol)
@@ -163,40 +161,43 @@ def _undersample(fullImgVol, fullpath_file_under):
             global om, dcf, interpolationSize4NUFFT
         if recalculateUndersampling4Each:
             samplings = sampler.calculateSamplings(slice=fullImgVol[...,0], returnMeta=True)
-            if(not isRadial):
-                mask = samplings['mask'] 
-                underImgVol = cartUnder(fullImgVol, mask, zeropad=zeropadOutput)
-                samplingfilename = fullpath_file_under + '.mask.mat'
-            else:
-                om = samplings['om'] 
-                dcf = samplings['dcf'].squeeze() 
+            if isRadial:
+                om = samplings['om']
+                dcf = samplings['dcf'].squeeze()
                 underImgVol = radUnder(fullImgVol, om, dcf)
-                samplingfilename = fullpath_file_under + '.om.mat'
+                samplingfilename = f'{fullpath_file_under}.om.mat'
+            else:
+                mask = samplings['mask']
+                underImgVol = cartUnder(fullImgVol, mask, zeropad=zeropadOutput)
+                samplingfilename = f'{fullpath_file_under}.mask.mat'
             sio.savemat(samplingfilename, samplings)
+        elif len(fullImgVol.shape) == 4:
+            underImgVol = np.zeros(fullImgVol.shape, dtype=fullImgVol.dtype)
+            for i in range(fullImgVol.shape[3]):
+                coilImgFull = fullImgVol[:,:,:,i]
+                coilImgUnder = (
+                    radUnder(coilImgFull, om, dcf, interpolationSize4NUFFT)
+                    if isRadial
+                    else cartUnder(coilImgFull, mask, zeropad=zeropadOutput)
+                )
+
+                underImgVol[:,:,:,i] = coilImgUnder
         else:
-            if len(fullImgVol.shape) == 4:
-                underImgVol = np.zeros(fullImgVol.shape, dtype=fullImgVol.dtype)
-                for i in range(fullImgVol.shape[3]):
-                    coilImgFull = fullImgVol[:,:,:,i] 
-                    if(not isRadial):
-                        coilImgUnder = cartUnder(coilImgFull, mask, zeropad=zeropadOutput)
-                    else:
-                        coilImgUnder = radUnder(coilImgFull, om, dcf, interpolationSize4NUFFT)
-                    underImgVol[:,:,:,i] = coilImgUnder 
-            else:
-                if(not isRadial):
-                    underImgVol = cartUnder(fullImgVol, mask, zeropad=zeropadOutput)
-                else:
-                    underImgVol = radUnder(fullImgVol, om, dcf, interpolationSize4NUFFT)
-        if not np.iscomplexobj(fullImgVol):
-            if NormWithABS:
+            underImgVol = (
+                radUnder(fullImgVol, om, dcf, interpolationSize4NUFFT)
+                if isRadial
+                else cartUnder(fullImgVol, mask, zeropad=zeropadOutput)
+            )
+
+        if NormWithABS:
+            if not np.iscomplexobj(fullImgVol):
                 underImgVol = abs(underImgVol)
-            else:
-                underImgVol = underImgVol.real
+        elif not np.iscomplexobj(fullImgVol):
+            underImgVol = underImgVol.real
         underImgVol = underImgVol[:,:,::sliceUndersamplingFactor,...]
         if sliceZPadFourier:
             underImgVol = resample(x=underImgVol, num=fullImgVol.shape[2], axis=2)
-                        
+
         if ".npy" in fullpath_file_under:
             with open(fullpath_file_under, 'wb') as f:
                 np.save(f, underImgVol)
@@ -209,7 +210,7 @@ def _undersample(fullImgVol, fullpath_file_under):
 types = ('.npy') # the tuple of file types
 files = []
 for type in types:
-    files.extend(glob.glob(fullySampledPath+'/**/*'+type, recursive=True))
+    files.extend(glob.glob(f'{fullySampledPath}/**/*{type}', recursive=True))
 #files = glob.glob(fullySampledPath+'/**/*.img', recursive=True)
 
 for fullpath_file_fully in tqdm(files):
@@ -233,7 +234,7 @@ for fullpath_file_fully in tqdm(files):
 types = ('.img', '.nii', '.nii.gz') # the tuple of file types
 files = []
 for type in types:
-    files.extend(glob.glob(fullySampledPath+'/**/*'+type, recursive=True))
+    files.extend(glob.glob(f'{fullySampledPath}/**/*{type}', recursive=True))
 #files = glob.glob(fullySampledPath+'/**/*.img', recursive=True)
 
 for fullpath_file_fully in tqdm(files):
@@ -257,7 +258,7 @@ for fullpath_file_fully in tqdm(files):
 types = ('.ima', '.dcm') # the tuple of file types
 files = []
 for type in types:
-    files.extend(glob.glob(fullySampledPath+'/**/*'+type, recursive=True))
+    files.extend(glob.glob(f'{fullySampledPath}/**/*{type}', recursive=True))
 
 dicoms = {}
 for file in tqdm(files):
@@ -268,7 +269,8 @@ for file in tqdm(files):
        or ((max_scan_no is not None) and (min_scan_no is not None) and ((scan_no < min_scan_no) or (scan_no > max_scan_no)))
           or ((max_scan_no is not None) and (min_scan_no is None) and (scan_no > max_scan_no))):
         continue
-    dicom_identifier = str(scan_no) + '.' + dicom.ProtocolName + '.' +  str(dicom.SeriesDate) + '.' + str(dicom.SeriesTime)
+    dicom_identifier = f'{scan_no}.{dicom.ProtocolName}.{str(dicom.SeriesDate)}.{str(dicom.SeriesTime)}'
+
     if dicom_identifier in dicoms:
         dicoms[dicom_identifier].append(file)
     else:

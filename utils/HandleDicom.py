@@ -30,10 +30,7 @@ def ChooseFileNRead(Read3D=True):
     root = tk.Tk()
     root.withdraw()
     file_path = filedialog.askopenfilename()
-    if(Read3D):
-        return FileRead3D(file_path)
-    else:
-        return FileRead2D(file_path)
+    return FileRead3D(file_path) if Read3D else FileRead2D(file_path)
 
 def FileRead3D(file_path):
     """Read a DICOM file (3D) using given file path as an array
@@ -67,10 +64,7 @@ def ListRead(file_list, expand_last_dim = False):
     data = None
     for file_path in file_list:
         dcm = pydicom.dcmread(file_path)
-        if data is None:
-            data = dcm.pixel_array
-        else:
-            data = np.dstack((data, dcm.pixel_array))
+        data = dcm.pixel_array if data is None else np.dstack((data, dcm.pixel_array))
     data = data.transpose(data,[1,0,2])
     if expand_last_dim: #If channel data not present
         data = np.expand_dims(data, -1)
@@ -112,24 +106,33 @@ def FileSave(data, file_path):
 def Dicom3Dto2D(Dicom3D):
     """Converts From 3D DICOM to 2D
     Preserves channel info"""
-    Dicom2D = Dicom3D.reshape(np.shape(Dicom3D)[0], np.shape(Dicom3D)[1] * np.shape(Dicom3D)[2], np.shape(Dicom3D)[3])
-    return Dicom2D
+    return Dicom3D.reshape(
+        np.shape(Dicom3D)[0],
+        np.shape(Dicom3D)[1] * np.shape(Dicom3D)[2],
+        np.shape(Dicom3D)[3],
+    )
 
 def Dicom2Dto3D(Dicom2D):
     """Converts From 2D DICOM to 3D
     Preserves channel info"""
-    Dicom3D = Dicom2D.reshape(np.shape(Dicom2D)[0],np.shape(Dicom2D)[0],int(np.shape(Dicom2D)[1]/np.shape(Dicom2D)[0]), np.shape(Dicom2D)[2])
-    return Dicom3D
+    return Dicom2D.reshape(
+        np.shape(Dicom2D)[0],
+        np.shape(Dicom2D)[0],
+        int(np.shape(Dicom2D)[1] / np.shape(Dicom2D)[0]),
+        np.shape(Dicom2D)[2],
+    )
 
-def Dicom2Dto1D(Dicom2D): 
+def Dicom2Dto1D(Dicom2D):
     """Converts From 2D DICOM to 1D
     No Sperate channel info left. It's now all merged together"""
-    Dicom1D = Dicom2D.reshape(np.shape(Dicom2D)[0] * np.shape(Dicom2D)[1] * np.shape(Dicom2D)[2])
-    return Dicom1D
+    return Dicom2D.reshape(
+        np.shape(Dicom2D)[0] * np.shape(Dicom2D)[1] * np.shape(Dicom2D)[2]
+    )
 
 def Dicom1Dto2D(Dicom1D, height, n_channel):
     """Converts From 1D DICOM to 2D
     No of Channel introduced seperately"""
-    Dicom2D = Dicom1D.reshape(height,int((np.shape(Dicom1D)[0]/height)/n_channel), n_channel)
-    return Dicom2D
+    return Dicom1D.reshape(
+        height, int((np.shape(Dicom1D)[0] / height) / n_channel), n_channel
+    )
 
